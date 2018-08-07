@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 
@@ -42,10 +43,14 @@ public class RemocaoReservaExpirada implements Runnable {
         localArmazenamento.setEspacoReservado(localArmazenamento.getEspacoReservado() - reservaEspaco.getBytesReservados());
         localArmazenamentoService.atualizarLocalArmazenamento(localArmazenamento);
         reservaEspaco.setStatus(ReservaEspaco.ReservaEspacoStatus.EXPIRADA);
+
         reservaEspacoService.atualizarReserva(reservaEspaco);
+
         log.info("Reserva do token {} expirada! ", reservaEspaco.getCodigoReserva());
 
         log.info("Disparando DomainEvent ReservaEspacoExpirada");
         reservaEspacoService.publicarReservaExpirada(reservaEspaco);
+
+
     }
 }

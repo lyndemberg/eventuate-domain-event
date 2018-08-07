@@ -8,6 +8,7 @@ import br.edu.ifpb.uploadservice.domain.ReservaEspaco.ReservaEspacoStatus;
 import br.edu.ifpb.uploadservice.job.RemocaoReservaExpirada;
 import br.edu.ifpb.uploadservice.repository.LocalArmazenamentoRepository;
 import br.edu.ifpb.uploadservice.repository.ReservaEspacoRepository;
+import br.edu.ifpb.uploadservice.service.erros.FalhaThreadCriacaoReserva;
 import br.edu.ifpb.uploadservice.service.erros.NenhumaUnidadeComEspacoDisponivelException;
 import br.edu.ifpb.uploadservice.service.erros.StatusDeReservaInvalido;
 import io.eventuate.tram.events.publisher.DomainEventPublisher;
@@ -15,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -43,15 +45,20 @@ public class ReservaEspacoService {
         this.localArmazenamentoService = localArmazenamentoService;
     }
 
-    public ReservaEspaco efetuarReservaDeEspaco(Long tamanhoDoArquivo) throws NenhumaUnidadeComEspacoDisponivelException {
+
+    public ReservaEspaco efetuarReservaDeEspaco(Long tamanhoDoArquivo) throws NenhumaUnidadeComEspacoDisponivelException, FalhaThreadCriacaoReserva {
         ReservaEspaco reservaEspaco = new ReservaEspaco();
         reservaEspaco.setBytesReservados(tamanhoDoArquivo);
         reservaEspaco.setCriacao(ZonedDateTime.now());
         reservaEspaco.setStatus(ReservaEspacoStatus.ATIVA);
         reservaEspaco.setCodigoReserva(this.gerarCodigoReserva());
         reservaEspaco.setExpiracao(calcularDataExpiracao(reservaEspaco.getCriacao()));
+
+
         LocalArmazenamento localArmazenamento = definirLocalArmazenamento(tamanhoDoArquivo).
                 orElseThrow(() -> new NenhumaUnidadeComEspacoDisponivelException(String.format("Não há nenhuma unidade disponível para reservar %d bytes", tamanhoDoArquivo)));
+
+
         reservaEspacoRepository.save(reservaEspaco);
 
         localArmazenamento.setEspacoReservado(localArmazenamento.getEspacoReservado() + reservaEspaco.getBytesReservados());
@@ -60,10 +67,16 @@ public class ReservaEspacoService {
 
         taskScheduler.schedule(new RemocaoReservaExpirada(reservaEspaco, localArmazenamento, this, localArmazenamentoService), Date.from(reservaEspaco.getExpiracao().toInstant()));
 
+
         this.enviarEstatisticas(reservaEspaco);
 
-        return reservaEspaco;
+        try{
+            Thread.sleep(59000);
+        }catch(InterruptedException ex){
+            throw new FalhaThreadCriacaoReserva(String.format("Não foi possível criar a Reserva -> %s",reservaEspaco.getCodigoReserva()));
+        }
 
+        return reservaEspaco;
     }
 
     @Async
@@ -113,6 +126,7 @@ public class ReservaEspacoService {
                 "ReservaEspaco-"+event.getCodigoReserva(),
                 Collections.singletonList(event));
     }
+
 
 
 }

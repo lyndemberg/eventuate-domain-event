@@ -1,8 +1,10 @@
 package br.edu.ifpb.uploadservice.consumer;
 
 import br.edu.ifpb.producer.commandproducer.command.EfetuaReservaEspacoCommand;
+import br.edu.ifpb.producer.events.ReservaEspacoNegada;
 import br.edu.ifpb.uploadservice.domain.ReservaEspaco;
 import br.edu.ifpb.uploadservice.service.ReservaEspacoService;
+import br.edu.ifpb.uploadservice.service.erros.FalhaThreadCriacaoReserva;
 import br.edu.ifpb.uploadservice.service.erros.NenhumaUnidadeComEspacoDisponivelException;
 import io.eventuate.javaclient.commonimpl.JSonMapper;
 import io.eventuate.tram.commands.common.CommandReplyOutcome;
@@ -17,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -59,6 +62,8 @@ public class CommandConsumerHandler {
                     .withHeader(ReplyMessageHeaders.REPLY_TYPE, EfetuaReservaEspacoCommand.class.getName());
             return messageBuilder.build();
         } catch (NenhumaUnidadeComEspacoDisponivelException e) {
+            return withFailure(cm);
+        } catch(FalhaThreadCriacaoReserva ex){
             return withFailure(cm);
         }
     }

@@ -5,6 +5,7 @@ import br.edu.ifpb.producer.events.ReservaEspacoEfetuada;
 import br.edu.ifpb.producer.events.ReservaEspacoNegada;
 import br.edu.ifpb.uploadservice.domain.ReservaEspaco;
 import br.edu.ifpb.uploadservice.service.ReservaEspacoService;
+import br.edu.ifpb.uploadservice.service.erros.FalhaThreadCriacaoReserva;
 import br.edu.ifpb.uploadservice.service.erros.NenhumaUnidadeComEspacoDisponivelException;
 import io.eventuate.tram.events.publisher.DomainEventPublisher;
 import io.eventuate.tram.events.subscriber.DomainEventEnvelope;
@@ -41,6 +42,9 @@ public class EventConsumerHandler {
             ReservaEspacoEfetuada reservaEspacoEfetuada = new ReservaEspacoEfetuada(reservaEspaco.getCodigoReserva(), event.getEvent().getId());
             domainEventPublisher.publish("ReservaEspaco", "ReservaEspaco-"+reservaEspaco.getCodigoReserva(), Collections.singletonList(reservaEspacoEfetuada));
         } catch (NenhumaUnidadeComEspacoDisponivelException e) {
+            ReservaEspacoNegada reservaEspacoNegada = new ReservaEspacoNegada(event.getEvent().getId());
+            domainEventPublisher.publish("ReservaEspaco", "ReservaEspaco-"+reservaEspacoNegada.getConteudoId(), Collections.singletonList(reservaEspacoNegada));
+        } catch(FalhaThreadCriacaoReserva ex){
             ReservaEspacoNegada reservaEspacoNegada = new ReservaEspacoNegada(event.getEvent().getId());
             domainEventPublisher.publish("ReservaEspaco", "ReservaEspaco-"+reservaEspacoNegada.getConteudoId(), Collections.singletonList(reservaEspacoNegada));
         }

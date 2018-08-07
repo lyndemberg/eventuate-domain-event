@@ -1,8 +1,10 @@
 package br.edu.ifpb.uploadservice.web;
 
 
+import br.edu.ifpb.producer.events.ReservaEspacoNegada;
 import br.edu.ifpb.uploadservice.domain.ReservaEspaco;
 import br.edu.ifpb.uploadservice.service.ReservaEspacoService;
+import br.edu.ifpb.uploadservice.service.erros.FalhaThreadCriacaoReserva;
 import br.edu.ifpb.uploadservice.service.erros.NenhumaUnidadeComEspacoDisponivelException;
 import br.edu.ifpb.uploadservice.service.erros.StatusDeReservaInvalido;
 import org.slf4j.Logger;
@@ -12,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -50,6 +53,9 @@ public class ReservaEspacoController {
             log.error("Nenhuma unidade com espaço disponível", e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .header("errorMessage", "Não há espaço suficiente para a sua reserva").body(null);
+        } catch(FalhaThreadCriacaoReserva ex){
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .header("errorMessage", "Não foi possível criar sua reserva").body(null);
         }
 
         return ResponseEntity.ok().body(reservaEspaco);
